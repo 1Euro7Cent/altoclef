@@ -1,5 +1,12 @@
 package adris.altoclef.tasks.misc.speedrun;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.commons.lang3.ArrayUtils;
+
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -11,28 +18,30 @@ import adris.altoclef.tasks.movement.DefaultGoToDimensionTask;
 import adris.altoclef.tasks.movement.GetCloseToBlockTask;
 import adris.altoclef.tasks.movement.GetToBlockTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
+import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasks.resources.CollectFoodTask;
 import adris.altoclef.tasks.resources.GetBuildingMaterialsTask;
+import adris.altoclef.tasks.slot.ClickSlotTask;
+import adris.altoclef.tasks.slot.EnsureFreeInventorySlotTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
+import adris.altoclef.util.slots.PlayerSlot;
+import adris.altoclef.util.slots.Slot;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.EndPortalFrameBlock;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.ai.brain.task.WanderAroundTask;
+import net.minecraft.entity.passive.SheepEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
-import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 
 public class BeatMinecraft2Task extends Task {
 
@@ -59,6 +68,7 @@ public class BeatMinecraft2Task extends Task {
             toItemTargets(Items.DIAMOND_SWORD),
             toItemTargets(Items.DIAMOND_PICKAXE, 1));
     private static final ItemTarget[] IRON_GEAR = combine(
+            toItemTargets(Items.WATER_BUCKET),
             toItemTargets(Items.IRON_SWORD),
             toItemTargets(Items.IRON_PICKAXE, 3));
     private static final ItemTarget[] IRON_GEAR_MIN = combine(
@@ -75,13 +85,13 @@ public class BeatMinecraft2Task extends Task {
     private BlockPos _endPortalCenterLocation;
     private boolean _ranStrongholdLocator;
     private boolean _endPortalOpened;
+    private boolean collectFood = false;
     private BlockPos _bedSpawnLocation;
 
     private int _cachedFilledPortalFrames = 0;
 
     private final HashMap<Item, Integer> _cachedEndItemDrops = new HashMap<>();
-
-    private Task _foodTask;
+    private Task _getBedTask = null;
     private Task _gearTask;
     private final Task _buildMaterialsTask = new GetBuildingMaterialsTask(BUILD_MATERIALS);
     private final PlaceBedAndSetSpawnTask _setBedSpawnTask = new PlaceBedAndSetSpawnTask();
@@ -110,11 +120,11 @@ public class BeatMinecraft2Task extends Task {
         if (!mod.getModSettings().shouldThrowawayUnusedItems()) {
             Debug.logWarning("\"throwawayUnusedItems\" is not set to true " + settingsWarningTail);
         }
-
+        // TODO: add throwaway items like this: mod.getBehaviour().addThrowawayItems();
         mod.getBlockTracker().trackBlock(TRACK_BLOCKS);
         mod.getBlockTracker().trackBlock(ItemHelper.itemsToBlocks(ItemHelper.BED));
         mod.getBehaviour().push();
-        mod.getBehaviour().addProtectedItems(Items.ENDER_EYE, Items.BLAZE_ROD, Items.ENDER_PEARL, Items.CRAFTING_TABLE);
+        mod.getBehaviour().addProtectedItems(Items.ENDER_EYE, Items.BLAZE_ROD, Items.ENDER_PEARL);
         mod.getBehaviour().addProtectedItems(ItemHelper.BED);
         // protect wool for beds
         mod.getBehaviour().addProtectedItems(ItemHelper.WOOL);
@@ -202,7 +212,7 @@ public class BeatMinecraft2Task extends Task {
                 if (endPortalFound(mod, _endPortalCenterLocation)) {
                     if (needsBeds(mod)) {
                         setDebugState("Getting beds before fight.");
-                        return getBedTask(mod, 1);
+                        return getBedTask(mod);
                     }
                     if (_shouldSetSpawnNearEndPortal) {
                         if (!spawnSetNearPortal(mod, _endPortalCenterLocation)) {
@@ -410,15 +420,13 @@ public class BeatMinecraft2Task extends Task {
                     setDebugState("Getting gear for Ender Eye journey");
                     return _gearTask;
                 }
-                if (shouldForce(mod, _foodTask)) {
-                    // Make a bucket for mlg safety.
-                    if (mod.getInventoryTracker().getItemCount(Items.WATER_BUCKET) < 1) {
-                        setDebugState("Getting safety bucket");
-                        return TaskCatalogue.getItemTask(Items.WATER_BUCKET, 1);
-                    }
-                    setDebugState("Getting Food for Ender Eye journey");
-                    return _foodTask;
-                }
+                // if (shouldForce(mod, _foodTask)) {
+                // Make a bucket for mlg safety.
+                // if (mod.getInventoryTracker().getItemCount(Items.WATER_BUCKET) < 1) {
+                // setDebugState("Getting safety bucket");
+                // return TaskCatalogue.getItemTask(Items.WATER_BUCKET, 1);
+                // }
+                // }
 
                 // Start with iron
                 if (!mod.getInventoryTracker().targetsMet(IRON_GEAR_MIN)
@@ -427,17 +435,11 @@ public class BeatMinecraft2Task extends Task {
                     return _gearTask;
                 }
 
-                // If we happen to find beds...
-                // if (needsBeds(mod) && anyBedsFound(mod)) {
-                // setDebugState("A bed was found, grabbing that first.");
-                // return getBedTask(mod);
-                // }
+                if (needsFood(mod)) {
+                    return new CollectFoodTask(FOOD_UNITS);
+                }
 
                 // Then get food
-                if (mod.getInventoryTracker().totalFoodScore() < MIN_FOOD_UNITS) {
-                    _foodTask = new CollectFoodTask(FOOD_UNITS);
-                    return _foodTask;
-                }
 
                 // Get beds after food.
                 // if (needsBeds(mod)) {
@@ -459,6 +461,14 @@ public class BeatMinecraft2Task extends Task {
                 return _goToNetherTask;
             }
             case NETHER -> {
+                // TODO: if no slots are free throw away junk items
+
+                if (needsFood(mod)) {
+                    // go to overworld to collect food
+                    setDebugState("Going to Overworld to get food");
+                    return new DefaultGoToDimensionTask(Dimension.OVERWORLD);
+                }
+
                 if (needsBlazeRods) {
                     setDebugState("Getting Blaze Rods");
                     return getBlazeRodsTask(mod, blazeRodTarget);
@@ -494,6 +504,17 @@ public class BeatMinecraft2Task extends Task {
         return new CollectBlazeRodsTask(count);
     }
 
+    private boolean needsFood(AltoClef mod) {
+        int foodScore = mod.getInventoryTracker().totalFoodScore();
+        if (foodScore < MIN_FOOD_UNITS) {
+            collectFood = true;
+        }
+        if (collectFood && foodScore >= FOOD_UNITS) {
+            collectFood = false;
+        }
+        return collectFood;
+    }
+
     private Task getEnderPearlTask(AltoClef mod, int count) {
         // Equip golden boots before trading...
         if (!mod.getInventoryTracker().isArmorEquipped(Items.GOLDEN_BOOTS)) {
@@ -511,8 +532,9 @@ public class BeatMinecraft2Task extends Task {
 
     private int getTargetBeds(AltoClef mod) {
         boolean needsToSetSpawn = _shouldSetSpawnNearEndPortal &&
-                (!spawnSetNearPortal(mod, _endPortalCenterLocation)
-                        && !shouldForce(mod, _setBedSpawnTask));
+                (!spawnSetNearPortal(mod, _endPortalCenterLocation) && !shouldForce(mod, _setBedSpawnTask));
+        // boolean needsToSetSpawn = _shouldSetSpawnNearEndPortal && _bedSpawnLocation
+        // == null;
         return _bedsToCollect + (needsToSetSpawn ? 1 : 0);
     }
 
@@ -520,14 +542,27 @@ public class BeatMinecraft2Task extends Task {
         return mod.getInventoryTracker().getItemCount(ItemHelper.BED) < getTargetBeds(mod);
     }
 
-    private Task getBedTask(AltoClef mod, int offset) {
+    private Task getBedTask(AltoClef mod) {
         int targetBeds = getTargetBeds(mod);
+
+        // Entity sheep = mod.getEntityTracker().getClosestEntity(SheepEntity.class);
+        // if (sheep == null) {
+        // setDebugState("No sheep found. Wandering around to hopefully find one.");
+        // return new TimeoutWanderTask();
+        // }
+
         // Collect beds. If we want to set our spawn, collect 1 more.
-        setDebugState("Collecting " + (targetBeds + offset) + " beds");
+        setDebugState("Collecting " + targetBeds + " beds");
         if (!mod.getInventoryTracker().hasItem(Items.SHEARS) && !anyBedsFound(mod)) {
             return TaskCatalogue.getItemTask(Items.SHEARS, 1);
         }
-        return TaskCatalogue.getItemTask("bed", targetBeds + offset);
+        if (!shouldForce(mod, _getBedTask)) {
+            // TODO: when there are no sheeps in render distance, find one
+            _getBedTask = TaskCatalogue.getItemTask("bed", targetBeds);
+        }
+
+        return _getBedTask;
+
     }
 
     private boolean anyBedsFound(AltoClef mod) {
