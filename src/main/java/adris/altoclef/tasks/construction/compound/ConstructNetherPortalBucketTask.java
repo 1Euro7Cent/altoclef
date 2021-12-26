@@ -32,7 +32,7 @@ import java.util.HashSet;
 public class ConstructNetherPortalBucketTask extends Task {
 
     // Order here matters
-    private static final Vec3i[] PORTAL_FRAME = new Vec3i[]{
+    private static final Vec3i[] PORTAL_FRAME = new Vec3i[] {
             // Left side
             new Vec3i(0, 0, -1),
             new Vec3i(0, 1, -1),
@@ -49,7 +49,7 @@ public class ConstructNetherPortalBucketTask extends Task {
             new Vec3i(0, 3, 1)
     };
 
-    private static final Vec3i[] PORTAL_INTERIOR = new Vec3i[]{
+    private static final Vec3i[] PORTAL_INTERIOR = new Vec3i[] {
             new Vec3i(0, 0, 0),
             new Vec3i(0, 1, 0),
             new Vec3i(0, 2, 0),
@@ -58,8 +58,10 @@ public class ConstructNetherPortalBucketTask extends Task {
             new Vec3i(0, 2, 1)
     };
 
-    // The "portalable" region includes the portal (1 x 6 x 4 structure) and an outer buffer for its construction and water bullshit.
-    // The "portal origin relative to region" corresponds to the portal origin with respect to the "portalable" region (see _portalOrigin).
+    // The "portalable" region includes the portal (1 x 6 x 4 structure) and an
+    // outer buffer for its construction and water bullshit.
+    // The "portal origin relative to region" corresponds to the portal origin with
+    // respect to the "portalable" region (see _portalOrigin).
     // This can only really be explained visually, sorry!
     private static final Vec3i PORTALABLE_REGION_SIZE = new Vec3i(4, 6, 6);
     private static final Vec3i PORTAL_ORIGIN_RELATIVE_TO_REGION = new Vec3i(1, 0, 2);
@@ -71,7 +73,7 @@ public class ConstructNetherPortalBucketTask extends Task {
     private final TimerGame _refreshTimer = new TimerGame(11);
     private BlockPos _portalOrigin = null;
 
-    //private BlockPos _currentLavaTarget = null;
+    // private BlockPos _currentLavaTarget = null;
     private BlockPos _currentDestroyTarget = null;
     private boolean _firstSearch = false;
 
@@ -114,7 +116,7 @@ public class ConstructNetherPortalBucketTask extends Task {
             mod.getSlotHandler().refreshInventory();
         }
 
-        //If too far, reset.
+        // If too far, reset.
         if (_portalOrigin != null && !_portalOrigin.isWithinDistance(mod.getPlayer().getPos(), 2000)) {
             _portalOrigin = null;
             _currentDestroyTarget = null;
@@ -128,20 +130,18 @@ public class ConstructNetherPortalBucketTask extends Task {
             }
         }
 
-
         if (_wanderTask.isActive() && !_wanderTask.isFinished(mod)) {
             setDebugState("Wandering before retrying...");
             _progressChecker.reset();
             return _wanderTask;
         }
 
-
         // Get bucket if we don't have one.
         int bucketCount = mod.getInventoryTracker().getItemCount(Items.BUCKET, Items.LAVA_BUCKET, Items.WATER_BUCKET);
         if (bucketCount < 2) {
             setDebugState("Getting buckets");
             _progressChecker.reset();
-            return TaskCatalogue.getItemTask(Items.BUCKET, 2);
+            return TaskCatalogue.getItemTask(Items.BUCKET, 2 - bucketCount);
         }
 
         // Get flint & steel if we don't have one
@@ -170,9 +170,11 @@ public class ConstructNetherPortalBucketTask extends Task {
                 BlockPos lavaPos = findLavaLake(mod, mod.getPlayer().getBlockPos());
                 if (lavaPos != null) {
                     // We have a lava lake, set our portal origin!
-                    BlockPos foundPortalRegion = getPortalableRegion(lavaPos, mod.getPlayer().getBlockPos(), new Vec3i(-1, 0, 0), PORTALABLE_REGION_SIZE, 20);
+                    BlockPos foundPortalRegion = getPortalableRegion(lavaPos, mod.getPlayer().getBlockPos(),
+                            new Vec3i(-1, 0, 0), PORTALABLE_REGION_SIZE, 20);
                     if (foundPortalRegion == null) {
-                        Debug.logWarning("Failed to find portalable region nearby. Consider increasing the search timeout range");
+                        Debug.logWarning(
+                                "Failed to find portalable region nearby. Consider increasing the search timeout range");
                     } else {
                         _portalOrigin = foundPortalRegion.add(PORTAL_ORIGIN_RELATIVE_TO_REGION);
                         foundSpot = true;
@@ -195,7 +197,8 @@ public class ConstructNetherPortalBucketTask extends Task {
             if (frameBlock == Blocks.OBSIDIAN) {
                 // Already satisfied, clear water above if need be.
                 BlockPos waterCheck = framePos.up();
-                if (mod.getWorld().getBlockState(waterCheck).getBlock() == Blocks.WATER && WorldHelper.isSourceBlock(mod, waterCheck, true)) {
+                if (mod.getWorld().getBlockState(waterCheck).getBlock() == Blocks.WATER
+                        && WorldHelper.isSourceBlock(mod, waterCheck, true)) {
                     setDebugState("Clearing water from cast");
                     return new ClearLiquidTask(waterCheck);
                 }
@@ -222,14 +225,15 @@ public class ConstructNetherPortalBucketTask extends Task {
                 setDebugState("Clearing inside of portal");
                 _currentDestroyTarget = p;
                 return null;
-                //return new DestroyBlockTask(p);
+                // return new DestroyBlockTask(p);
             }
         }
 
         setDebugState("Flinting and Steeling");
 
         // Flint and steel it baby
-        return new InteractWithBlockTask(new ItemTarget(Items.FLINT_AND_STEEL, 1), Direction.UP, _portalOrigin.down(), true);
+        return new InteractWithBlockTask(new ItemTarget(Items.FLINT_AND_STEEL, 1), Direction.UP, _portalOrigin.down(),
+                true);
     }
 
     @Override
@@ -254,7 +258,8 @@ public class ConstructNetherPortalBucketTask extends Task {
         double nearestSqDistance = Double.POSITIVE_INFINITY;
         BlockPos nearestLake = null;
         for (BlockPos pos : mod.getBlockTracker().getKnownLocations(Blocks.LAVA)) {
-            if (alreadyExplored.contains(pos)) continue;
+            if (alreadyExplored.contains(pos))
+                continue;
             double sqDist = playerPos.getSquaredDistance(pos);
             if (sqDist < nearestSqDistance) {
                 int depth = getNumberOfBlocksAdjacent(alreadyExplored, pos);
@@ -274,7 +279,8 @@ public class ConstructNetherPortalBucketTask extends Task {
     // Used to flood-scan for blocks of lava.
     private int getNumberOfBlocksAdjacent(HashSet<BlockPos> alreadyExplored, BlockPos origin) {
         // Base case: We already explored this one
-        if (alreadyExplored.contains(origin)) return 0;
+        if (alreadyExplored.contains(origin))
+            return 0;
         alreadyExplored.add(origin);
 
         // Base case: We hit a non-full lava block.
@@ -284,14 +290,17 @@ public class ConstructNetherPortalBucketTask extends Task {
             return 0;
         } else {
             // We may not be a full lava block
-            if (!s.getFluidState().isStill()) return 0;
+            if (!s.getFluidState().isStill())
+                return 0;
             int level = s.getFluidState().getLevel();
-            //Debug.logMessage("TEST LEVEL: " + level + ", " + height);
+            // Debug.logMessage("TEST LEVEL: " + level + ", " + height);
             // Only accept FULL SOURCE BLOCKS
-            if (level != 8) return 0;
+            if (level != 8)
+                return 0;
         }
 
-        BlockPos[] toCheck = new BlockPos[]{origin.north(), origin.south(), origin.east(), origin.west(), origin.up(), origin.down()};
+        BlockPos[] toCheck = new BlockPos[] { origin.north(), origin.south(), origin.east(), origin.west(), origin.up(),
+                origin.down() };
 
         int bonus = 0;
         for (BlockPos check : toCheck) {
@@ -303,8 +312,10 @@ public class ConstructNetherPortalBucketTask extends Task {
     }
 
     // Get a region that a portal can fit into
-    private BlockPos getPortalableRegion(BlockPos lava, BlockPos playerPos, Vec3i sizeOffset, Vec3i sizeAllocation, int timeoutRange) {
-        Vec3i[] directions = new Vec3i[]{new Vec3i(1, 0, 0), new Vec3i(-1, 0, 0), new Vec3i(0, 0, 1), new Vec3i(0, 0, -1)};
+    private BlockPos getPortalableRegion(BlockPos lava, BlockPos playerPos, Vec3i sizeOffset, Vec3i sizeAllocation,
+            int timeoutRange) {
+        Vec3i[] directions = new Vec3i[] { new Vec3i(1, 0, 0), new Vec3i(-1, 0, 0), new Vec3i(0, 0, 1),
+                new Vec3i(0, 0, -1) };
 
         double minDistanceToPlayer = Double.POSITIVE_INFINITY;
         BlockPos bestPos = null;
@@ -326,7 +337,8 @@ public class ConstructNetherPortalBucketTask extends Task {
                             BlockPos toCheck = lava.add(offset).add(sizeOffset).add(dx, dy, dz);
                             assert MinecraftClient.getInstance().world != null;
                             BlockState state = MinecraftClient.getInstance().world.getBlockState(toCheck);
-                            if (state.getBlock() == Blocks.LAVA || state.getBlock() == Blocks.WATER || state.getBlock() == Blocks.BEDROCK) {
+                            if (state.getBlock() == Blocks.LAVA || state.getBlock() == Blocks.WATER
+                                    || state.getBlock() == Blocks.BEDROCK) {
                                 found = false;
                                 break moveAlongLine;
                             }

@@ -38,7 +38,9 @@ public class GetCommand extends Command {
                     String[] itemQuantityPair = part.split(" ");
                     if (itemQuantityPair.length > 2 || itemQuantityPair.length <= 0) {
                         // Must be either "item count" or "item"
-                        throw new CommandException("Resource array element must be either \"item count\" or \"item\", but \"" + part + "\"" + " has " + itemQuantityPair.length + " parts.");
+                        throw new CommandException(
+                                "Resource array element must be either \"item count\" or \"item\", but \"" + part + "\""
+                                        + " has " + itemQuantityPair.length + " parts.");
                     }
                     String item = itemQuantityPair[0];
                     int count = 1;
@@ -58,7 +60,8 @@ public class GetCommand extends Command {
                     }
                 }
                 if (items.size() != 0) {
-                    GetItems(mod, items.entrySet().stream().map(entry -> new ItemTarget(entry.getKey(), entry.getValue())).toArray(ItemTarget[]::new));
+                    GetItems(mod, items.entrySet().stream()
+                            .map(entry -> new ItemTarget(entry.getKey(), entry.getValue())).toArray(ItemTarget[]::new));
                 } else {
                     mod.log("No items specified.");
                     finish();
@@ -70,7 +73,9 @@ public class GetCommand extends Command {
     }
 
     private static void OnResourceDoesNotExist(AltoClef mod, String resource) {
-        mod.log("\"" + resource + "\" is not a catalogued resource. Can't get it yet, sorry! If it's a generic block try using baritone.", MessagePriority.OPTIONAL);
+        mod.log("\"" + resource
+                + "\" is not a catalogued resource. Can't get it yet, sorry! If it's a generic block try using baritone.",
+                MessagePriority.OPTIONAL);
         mod.log("Use @list to get a list of available resources.", MessagePriority.OPTIONAL);
     }
 

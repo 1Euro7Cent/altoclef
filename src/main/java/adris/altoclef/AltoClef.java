@@ -81,14 +81,16 @@ public class AltoClef implements ModInitializer {
 
     // uh oh static
     public static int getTicks() {
-        ClientConnection con = Objects.requireNonNull(MinecraftClient.getInstance().getNetworkHandler()).getConnection();
+        ClientConnection con = Objects.requireNonNull(MinecraftClient.getInstance().getNetworkHandler())
+                .getConnection();
         return ((ClientConnectionAccessor) con).getTicks();
     }
 
     // Are we in game (playing in a server/world)
     // uh oh, static creep
     public static boolean inGame() {
-        return MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().getNetworkHandler() != null;
+        return MinecraftClient.getInstance().player != null
+                && MinecraftClient.getInstance().getNetworkHandler() != null;
     }
 
     @Override
@@ -144,9 +146,8 @@ public class AltoClef implements ModInitializer {
 
         // Misc wiring
         // When we place a block and might be tracking it, make the change immediate.
-        _extraController.onBlockPlaced.addListener(new ActionListener<>(value ->
-                _blockTracker.addBlock(value.blockState.getBlock(), value.blockPos)));
-
+        _extraController.onBlockPlaced.addListener(
+                new ActionListener<>(value -> _blockTracker.addBlock(value.blockState.getBlock(), value.blockPos)));
 
         initializeCommands();
 
@@ -192,9 +193,9 @@ public class AltoClef implements ModInitializer {
         // Let baritone move items to hotbar to use them
         getClientBaritoneSettings().allowInventory.value = true;
         // Pretty safe, minor risk EXCEPT in the nether, where it is a huge risk.
-        getClientBaritoneSettings().allowDiagonalAscend.value = true;
+        getClientBaritoneSettings().allowDiagonalAscend.value = false;
         // Reduces a bit of far rendering to save FPS
-        getClientBaritoneSettings().fadePath.value = true;
+        getClientBaritoneSettings().fadePath.value = false;
         // Don't let baritone scan dropped items, we handle that ourselves.
         getClientBaritoneSettings().mineScanDroppedItems.value = false;
         // Don't let baritone wait for drops, we handle that ourselves.
@@ -214,7 +215,8 @@ public class AltoClef implements ModInitializer {
         // By default don't use shears.
         getExtraBaritoneSettings().allowShears(false);
 
-        // Give baritone more time to calculate paths. Sometimes they can be really far away.
+        // Give baritone more time to calculate paths. Sometimes they can be really far
+        // away.
         // Was: 2000L
         getClientBaritoneSettings().failureTimeoutMS.value = 6000L;
         // Was: 5000L
@@ -226,7 +228,8 @@ public class AltoClef implements ModInitializer {
     // List all command sources here.
     private void initializeCommands() {
         try {
-            // This creates the commands. If you want any more commands feel free to initialize new command lists.
+            // This creates the commands. If you want any more commands feel free to
+            // initialize new command lists.
             new AltoClefCommands();
         } catch (Exception e) {
             e.printStackTrace();
@@ -297,7 +300,7 @@ public class AltoClef implements ModInitializer {
 
     public adris.altoclef.Settings reloadModSettings() {
         adris.altoclef.Settings result = adris.altoclef.Settings.load();
-        //noinspection ConstantConditions
+        // noinspection ConstantConditions
         if (result != null) {
             _settings = result;
         }
@@ -344,7 +347,8 @@ public class AltoClef implements ModInitializer {
 
     // Extra control
     public void runUserTask(Task task) {
-        runUserTask(task, () -> { });
+        runUserTask(task, () -> {
+        });
     }
 
     @SuppressWarnings("rawtypes")
@@ -370,11 +374,15 @@ public class AltoClef implements ModInitializer {
     }
 
     public Dimension getCurrentDimension() {
-        if (!inGame()) return Dimension.OVERWORLD;
-        if (getWorld().getDimension().isUltrawarm()) return Dimension.NETHER;
-        if (getWorld().getDimension().isNatural()) return Dimension.OVERWORLD;
+        if (!inGame())
+            return Dimension.OVERWORLD;
+        if (getWorld().getDimension().isUltrawarm())
+            return Dimension.NETHER;
+        if (getWorld().getDimension().isNatural())
+            return Dimension.OVERWORLD;
         return Dimension.END;
     }
+
     public Vec3d getOverworldPosition() {
         return WorldHelper.getOverworldPosition(this, getPlayer().getPos());
     }
@@ -408,6 +416,7 @@ public class AltoClef implements ModInitializer {
             }
         }
     }
+
     public static void subscribeToPostInit(Consumer<AltoClef> onPostInit) {
         synchronized (_postInitQueue) {
             _postInitQueue.add(onPostInit);

@@ -29,10 +29,13 @@ public class WaitForDragonAndPearlTask extends Task implements IDragonWaiter {
 
     @Override
     public void setExitPortalTop(BlockPos top) {
-        BlockPos actualTarget = top.down();
-        if (!actualTarget.equals(_targetToPearl)) {
-            _targetToPearl = actualTarget;
-            _throwPearlTask = new ThrowEnderPearlSimpleProjectileTask(actualTarget);
+        // i get null pointer exeption when the end is loading slow
+        if (top != null) {
+            BlockPos actualTarget = top.down();
+            if (!actualTarget.equals(_targetToPearl)) {
+                _targetToPearl = actualTarget;
+                _throwPearlTask = new ThrowEnderPearlSimpleProjectileTask(actualTarget);
+            }
         }
     }
 
@@ -57,7 +60,8 @@ public class WaitForDragonAndPearlTask extends Task implements IDragonWaiter {
             return TaskCatalogue.getItemTask(Items.ENDER_PEARL, 1);
         }
 
-        if (mod.getInventoryTracker().getBuildingMaterialCount() < 5 || (_buildingMaterialsTask != null && _buildingMaterialsTask.isActive() && !_buildingMaterialsTask.isFinished(mod))) {
+        if (mod.getInventoryTracker().getBuildingMaterialCount() < 5 || (_buildingMaterialsTask != null
+                && _buildingMaterialsTask.isActive() && !_buildingMaterialsTask.isFinished(mod))) {
             setDebugState("Collecting building materials...");
             return _buildingMaterialsTask;
         }
@@ -103,7 +107,7 @@ public class WaitForDragonAndPearlTask extends Task implements IDragonWaiter {
     public boolean isFinished(AltoClef mod) {
         return !_dragonIsPerching
                 && ((_throwPearlTask == null || !_throwPearlTask.isActive() || _throwPearlTask.isFinished(mod))
-                || WorldHelper.inRangeXZ(mod.getPlayer(), _targetToPearl, CLOSE_ENOUGH_DISTANCE));
+                        || WorldHelper.inRangeXZ(mod.getPlayer(), _targetToPearl, CLOSE_ENOUGH_DISTANCE));
     }
 
     @Override

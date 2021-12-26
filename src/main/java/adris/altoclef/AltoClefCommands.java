@@ -28,8 +28,9 @@ public class AltoClefCommands {
                 new PunkCommand(),
                 new SetGammaCommand(),
                 new ListCommand()
-                //new TestMoveInventoryCommand(),
-                //    new TestSwapInventoryCommand()
+        // new SpawnProofCommand()
+        // new TestMoveInventoryCommand(),
+        // new TestSwapInventoryCommand()
         );
     }
 }
