@@ -14,6 +14,7 @@ public class ThrowSlotTask extends Task {
     public ThrowSlotTask(Slot slot) {
         _slot = slot;
     }
+
     public ThrowSlotTask() {
         this(null);
     }

@@ -21,22 +21,17 @@ import adris.altoclef.tasks.movement.PickupDroppedItemTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasks.resources.CollectFoodTask;
 import adris.altoclef.tasks.resources.GetBuildingMaterialsTask;
-import adris.altoclef.tasks.slot.ClickSlotTask;
-import adris.altoclef.tasks.slot.EnsureFreeInventorySlotTask;
+import adris.altoclef.tasks.slot.ThrowSlotTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
-import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.EndPortalFrameBlock;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.ai.brain.task.WanderAroundTask;
-import net.minecraft.entity.passive.SheepEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
@@ -121,11 +116,72 @@ public class BeatMinecraft2Task extends Task {
             Debug.logWarning("\"throwawayUnusedItems\" is not set to true " + settingsWarningTail);
         }
         // TODO: add throwaway items like this: mod.getBehaviour().addThrowawayItems();
+        /*  Throwaway items to prevent bot from throwing away important stuff */
+
+        ArrayList<Item> garbageItems = new ArrayList<>();
+
+        // sand and sandstone
+        garbageItems.add(Items.GRAVEL);
+        garbageItems.add(Items.SAND);
+        garbageItems.add(Items.SANDSTONE);
+        garbageItems.add(Items.SANDSTONE_SLAB);
+        garbageItems.add(Items.SANDSTONE_STAIRS);
+        garbageItems.add(Items.SANDSTONE_WALL);
+        garbageItems.add(Items.CUT_SANDSTONE);
+        garbageItems.add(Items.CUT_SANDSTONE_SLAB);
+        garbageItems.add(Items.RED_SAND);
+        garbageItems.add(Items.RED_SAND);
+        garbageItems.add(Items.RED_SANDSTONE);
+        garbageItems.add(Items.RED_SANDSTONE_SLAB);
+        garbageItems.add(Items.RED_SANDSTONE_STAIRS);
+        garbageItems.add(Items.RED_SANDSTONE_WALL);
+
+        //mob drops
+
+        garbageItems.add(Items.ROTTEN_FLESH);
+        garbageItems.add(Items.SPIDER_EYE);
+        garbageItems.add(Items.FERMENTED_SPIDER_EYE);
+        garbageItems.add(Items.STRING);
+        garbageItems.add(Items.BONE);
+        garbageItems.add(Items.BONE_MEAL);
+        garbageItems.add(Items.ARROW);
+        garbageItems.add(Items.TIPPED_ARROW);
+        garbageItems.add(Items.SPECTRAL_ARROW);
+        garbageItems.add(Items.GUNPOWDER);
+        garbageItems.add(Items.GHAST_TEAR);
+
+        // plants
+        garbageItems.add(Items.WHEAT_SEEDS);
+        garbageItems.add(Items.PUMPKIN_SEEDS);
+        garbageItems.add(Items.MELON_SEEDS);
+        garbageItems.add(Items.BEETROOT_SEEDS);
+        garbageItems.add(Items.NETHER_WART);
+        garbageItems.add(Items.SUGAR_CANE);
+        garbageItems.add(Items.SUGAR);
+        garbageItems.add(Items.OAK_SAPLING);
+        garbageItems.add(Items.SPRUCE_SAPLING);
+        garbageItems.add(Items.BIRCH_SAPLING);
+        garbageItems.add(Items.JUNGLE_SAPLING);
+        garbageItems.add(Items.ACACIA_SAPLING);
+        garbageItems.add(Items.DARK_OAK_SAPLING);
+
+        // add them to the throwaway items2
+        for (Item item : garbageItems) {
+            mod.getBehaviour().addThrowawayItems(item);
+        }
+
+        // mod.getBehaviour().addThrowawayItems(Items.GRAVEL);
+        // mod.getBehaviour().addThrowawayItems(Items.SAND);
+        // mod.getBehaviour().addThrowawayItems(Items.SANDSTONE);
+        // mod.getBehaviour().addThrowawayItems(Items.CUT_SANDSTONE);
+        // mod.getBehaviour().addThrowawayItems(Items.SANDSTO);
+
         mod.getBlockTracker().trackBlock(TRACK_BLOCKS);
         mod.getBlockTracker().trackBlock(ItemHelper.itemsToBlocks(ItemHelper.BED));
         mod.getBehaviour().push();
         mod.getBehaviour().addProtectedItems(Items.ENDER_EYE, Items.BLAZE_ROD, Items.ENDER_PEARL);
         mod.getBehaviour().addProtectedItems(ItemHelper.BED);
+        mod.getBehaviour().addProtectedItems(Items.FLINT_AND_STEEL);
         // protect wool for beds
         mod.getBehaviour().addProtectedItems(ItemHelper.WOOL);
         // Allow walking on end portal
@@ -463,11 +519,25 @@ public class BeatMinecraft2Task extends Task {
             case NETHER -> {
                 // TODO: if no slots are free throw away junk items
 
+                /*
+                if (mod.getInventoryTracker().getEmptyInventorySlotCount() < 1) {
+                    setDebugState("Throwing away junk items");
+                    Slot toThrow = mod.getInventoryTracker().getGarbageSlot();
+                
+                    return new ThrowSlotTask(toThrow); //TODO: fix this
+                }
+                
                 if (needsFood(mod)) {
                     // go to overworld to collect food
+                    // make shure we are not blocked by portal cooldown
+                    if (mod.getPlayer().hasNetherPortalCooldown()) {
+                        setDebugState("Waiting for portal cooldown");
+                        return new TimeoutWanderTask();
+                    }
                     setDebugState("Going to Overworld to get food");
                     return new DefaultGoToDimensionTask(Dimension.OVERWORLD);
                 }
+                //*/
 
                 if (needsBlazeRods) {
                     setDebugState("Getting Blaze Rods");
@@ -552,6 +622,7 @@ public class BeatMinecraft2Task extends Task {
         // }
 
         // Collect beds. If we want to set our spawn, collect 1 more.
+        // TODO: when we found beds that are too far away, we should ignore that
         setDebugState("Collecting " + targetBeds + " beds");
         if (!mod.getInventoryTracker().hasItem(Items.SHEARS) && !anyBedsFound(mod)) {
             return TaskCatalogue.getItemTask(Items.SHEARS, 1);

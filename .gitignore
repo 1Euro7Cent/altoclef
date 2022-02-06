@@ -120,3 +120,5 @@ run/
 
 bin/
 .vscode/
+backup.bat
+backup.js
